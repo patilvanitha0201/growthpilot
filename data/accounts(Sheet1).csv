@@ -1,0 +1,31 @@
+﻿account_id,company_name,industry,contract_value,days_since_last_login,weekly_logins_last_30d,features_used,total_features_available,open_support_tickets,avg_ticket_severity,nps_score,days_since_nps,days_since_onboarding,days_to_renewal,champion_changed
+A001,Acme Corp,HR Tech,48000,21,1,3,12,5,4.5,3,90,420,28,1
+A002,TechStart Inc,FinTech,32000,18,2,4,15,4,4.2,4,60,310,35,1
+A003,Globex Systems,Supply Chain,75000,14,3,5,18,3,3.8,5,45,520,42,0
+A004,Initech Solutions,MarTech,28000,10,4,4,10,4,3.5,4,75,180,55,1
+A005,Umbrella Analytics,HR Tech,41000,12,3,3,12,3,4,3,50,290,48,0
+A006,Hooli Platforms,FinTech,95000,25,1,2,20,6,4.8,2,120,600,20,1
+A007,Pied Piper SaaS,DevOps,22000,16,2,5,14,3,3.2,4,80,240,62,0
+A008,Massive Dynamic,HealthTech,110000,8,5,7,20,2,2.5,6,30,730,90,1
+A009,Soylent Corp,EdTech,19000,30,0,1,8,7,5,1,150,120,15,1
+A010,Weyland Corp,Supply Chain,67000,22,1,4,16,5,4.3,3,95,480,25,0
+A011,Dunder Mifflin,MarTech,35000,3,9,10,12,1,1.5,9,20,365,180,0
+A012,Vandelay Tech,HR Tech,52000,2,11,13,15,0,0,8,15,410,200,0
+A013,Bluth Company,FinTech,44000,5,7,9,14,1,2,8,25,280,155,0
+A014,Prestige Worldwide,DevOps,29000,4,8,8,12,1,1.8,7,18,190,170,0
+A015,Reynholm Industries,EdTech,38000,6,6,7,10,2,2.2,7,30,320,145,0
+A016,Initrode Global,HealthTech,88000,3,10,15,18,0,0,9,12,550,210,0
+A017,Mooby Corp,MarTech,31000,7,5,6,10,2,2.5,6,40,230,130,0
+A018,Sterling Cooper,HR Tech,56000,4,8,11,14,1,1.2,8,22,400,190,0
+A019,Cyberdyne Systems,Supply Chain,72000,5,7,12,16,1,2,7,35,490,160,0
+A020,Dharma Initiative,FinTech,43000,6,6,8,12,2,2.3,7,28,300,140,0
+A021,Oceanic Airlines,DevOps,26000,8,5,7,11,2,2.8,6,45,210,120,0
+A022,Nakatomi Corp,HealthTech,91000,4,9,14,18,1,1.5,8,20,580,195,0
+A023,Tyrell Corp,MarTech,48000,9,4,6,12,3,3,5,55,340,95,0
+A024,Oscorp Industries,HR Tech,33000,11,4,5,10,3,3.2,5,65,250,85,0
+A025,Aperture Science,EdTech,27000,7,5,6,10,2,2.8,6,38,185,115,0
+A026,Black Mesa,Supply Chain,64000,13,3,5,14,3,3.5,5,70,440,72,0
+A027,Veridian Dynamics,FinTech,55000,10,4,7,13,2,2.5,6,48,370,88,0
+A028,Sirius Cybernetics,DevOps,36000,9,5,8,12,2,2.2,7,42,260,100,0
+A029,Omni Consumer,HealthTech,82000,12,4,9,16,2,3,6,58,510,78,0
+A030,Rekall Inc,MarTech,24000,15,3,4,9,3,3.3,5,72,160,65,0
