@@ -1,75 +1,72 @@
 import pandas as pd
 
-# ── Weights ──────────────────────────────────────────────
-W_ENGAGEMENT  = 0.35
-W_ADOPTION    = 0.25
-W_SENTIMENT   = 0.25
-W_LIFECYCLE   = 0.15
-
-def _clamp(val, lo=0, hi=100):
+def clamp(value, min_val=0, max_val=100):
     """Keep any score between 0 and 100."""
-    return max(lo, min(hi, val))
+    return max(min_val, min(max_val, value))
 
 
-# ── 4 Signal Scorers ─────────────────────────────────────
-
-def engagement_score(row):
+def compute_engagement_score(row):
     """
-    Rewards frequent logins, penalises days of absence.
-    Max possible raw = 100 + (10*5) = 150 → clamped to 100.
+    Engagement = how actively is the user logging in?
+    Signals: days_since_last_login, weekly_logins_last_30d
+    Weight in final score: 35%
     """
-    base  = 100 - (row["days_since_last_login"] * 2.5)
-    bonus = row["weekly_logins_last_30d"] * 5
-    return _clamp(base + bonus)
+    login_recency  = clamp(100 - (row["days_since_last_login"] * 4))
+    login_freq     = clamp(row["weekly_logins_last_30d"] * 10)
+    score          = (login_recency * 0.5) + (login_freq * 0.5)
+    return clamp(score)
 
 
-def adoption_score(row):
+def compute_adoption_score(row):
     """
-    Simple ratio: features used / features available.
+    Adoption = how much of the product are they actually using?
+    Signals: features_used vs total_features_available
+    Weight in final score: 25%
     """
     if row["total_features_available"] == 0:
         return 0
     ratio = row["features_used"] / row["total_features_available"]
-    return _clamp(ratio * 100)
+    return clamp(ratio * 100)
 
 
-def sentiment_score(row):
+def compute_sentiment_score(row):
     """
-    NPS drives the base; open tickets and their severity drag it down.
-    NPS is 0-10 → scale to 0-100, then subtract ticket penalty.
+    Sentiment = how happy is the customer?
+    Signals: nps_score, open_support_tickets, avg_ticket_severity
+    Weight in final score: 25%
     """
-    nps_base       = (row["nps_score"] / 10) * 100
-    ticket_penalty = (row["open_support_tickets"] * 8) + \
-                     (row["avg_ticket_severity"] * 4)
-    return _clamp(nps_base - ticket_penalty)
+    nps_component      = clamp(row["nps_score"] * 10)
+    ticket_penalty     = row["open_support_tickets"] * 8
+    severity_penalty   = row["avg_ticket_severity"] * 5
+    score              = nps_component - ticket_penalty - severity_penalty
+    return clamp(score)
 
 
-def lifecycle_score(row):
+def compute_lifecycle_score(row):
     """
-    Penalises champion changes heavily.
-    Penalises proximity to renewal (< 30 days = danger zone).
+    Lifecycle = where are they in the customer journey?
+    Signals: days_to_renewal, champion_changed
+    Weight in final score: 15%
     """
-    champion_penalty = 35 if row["champion_changed"] == 1 else 0
-    days_left        = row["days_to_renewal"]
-    renewal_penalty  = max(0, (30 - days_left) * 1.5) if days_left < 30 else 0
-    return _clamp(100 - champion_penalty - renewal_penalty)
+    # Penalty ramps up as renewal approaches inside 60 days
+    renewal_penalty    = clamp((60 - row["days_to_renewal"]) * 1.5, 0, 60) \
+                         if row["days_to_renewal"] < 60 else 0
+    champion_penalty   = 35 if row["champion_changed"] == 1 else 0
+    score              = 100 - renewal_penalty - champion_penalty
+    return clamp(score)
 
-
-# ── Master Scorer ─────────────────────────────────────────
 
 def compute_health_score(row):
-    """Weighted aggregate of the 4 signal scores → 0-100."""
-    e = engagement_score(row)
-    a = adoption_score(row)
-    s = sentiment_score(row)
-    l = lifecycle_score(row)
+    """
+    Final weighted health score (0–100).
+    """
+    e = compute_engagement_score(row)
+    a = compute_adoption_score(row)
+    s = compute_sentiment_score(row)
+    l = compute_lifecycle_score(row)
 
-    score = (e * W_ENGAGEMENT) + \
-            (a * W_ADOPTION)   + \
-            (s * W_SENTIMENT)  + \
-            (l * W_LIFECYCLE)
-
-    return round(_clamp(score), 1)
+    score = (e * 0.35) + (a * 0.25) + (s * 0.25) + (l * 0.15)
+    return round(clamp(score), 1)
 
 
 def assign_tier(score):
@@ -81,37 +78,23 @@ def assign_tier(score):
         return "🔴 Critical"
 
 
-# ── Score Breakdown (for detail view) ────────────────────
-
-def get_score_breakdown(row):
-    """Returns each signal score individually for the bar chart."""
-    return {
-        "Engagement"  : round(engagement_score(row), 1),
-        "Adoption"    : round(adoption_score(row), 1),
-        "Sentiment"   : round(sentiment_score(row), 1),
-        "Lifecycle"   : round(lifecycle_score(row), 1),
-    }
-
-
-# ── Main Entry Point ──────────────────────────────────────
-
-def score_accounts(df: pd.DataFrame) -> pd.DataFrame:
+def score_accounts(df):
     """
-    Takes the raw CSV dataframe.
-    Returns it enriched with health_score, tier, and breakdown columns.
+    Takes the raw accounts dataframe.
+    Returns the same dataframe with 5 new columns added:
+    engagement_score, adoption_score, sentiment_score,
+    lifecycle_score, health_score, risk_tier
     """
     df = df.copy()
 
-    df["health_score"] = df.apply(compute_health_score, axis=1)
-    df["tier"]         = df["health_score"].apply(assign_tier)
+    df["engagement_score"] = df.apply(compute_engagement_score, axis=1)
+    df["adoption_score"]   = df.apply(compute_adoption_score,   axis=1)
+    df["sentiment_score"]  = df.apply(compute_sentiment_score,  axis=1)
+    df["lifecycle_score"]  = df.apply(compute_lifecycle_score,  axis=1)
+    df["health_score"]     = df.apply(compute_health_score,     axis=1)
+    df["risk_tier"]        = df["health_score"].apply(assign_tier)
 
-    # Individual signal scores (used in detail view)
-    df["score_engagement"] = df.apply(engagement_score, axis=1).round(1)
-    df["score_adoption"]   = df.apply(adoption_score,   axis=1).round(1)
-    df["score_sentiment"]  = df.apply(sentiment_score,  axis=1).round(1)
-    df["score_lifecycle"]  = df.apply(lifecycle_score,  axis=1).round(1)
-
-    # Sort: Critical first, then by health_score ascending
+    # Sort by health score ascending so most at-risk are first
     df = df.sort_values("health_score", ascending=True).reset_index(drop=True)
 
     return df

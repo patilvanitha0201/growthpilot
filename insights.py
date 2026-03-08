@@ -1,5 +1,5 @@
-import anthropic
 import os
+import anthropic
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -7,55 +7,37 @@ load_dotenv()
 client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
 
-def get_insight(row) -> dict:
+def get_insight(row: dict) -> dict:
     """
-    Calls Claude with the account's signals.
-    Returns a dict with 'risk_reason' and 'recommended_action'.
+    Takes a single account row (as a dict).
+    Returns a dict with two keys:
+      - risk_reason: why is this account at risk (2 sentences)
+      - recommended_action: what the CSM should do this week (1 sentence)
     """
 
-    champion_text = "Yes — key contact recently changed" \
-                    if row["champion_changed"] == 1 \
-                    else "No"
+    champion_text = "Yes — champion changed recently" if row["champion_changed"] == 1 else "No"
 
-    prompt = f"""
-You are GrowthPilot, an AI assistant for B2B SaaS Customer Success teams.
-Your job is to help CSMs act fast on at-risk accounts.
+    prompt = f"""You are GrowthPilot, an AI assistant for B2B SaaS Customer Success teams.
+Your job is to help CSMs understand why an account is at risk and what to do about it.
 
-Here is the account data:
+Account Details:
+- Company: {row['company_name']}
+- Industry: {row['industry']}
+- Contract Value: ${row['contract_value']:,}
+- Health Score: {row['health_score']}/100 ({row['risk_tier']})
+- Days since last login: {row['days_since_last_login']}
+- Weekly logins (last 30 days): {row['weekly_logins_last_30d']}
+- Features adopted: {row['features_used']} out of {row['total_features_available']} available
+- Open support tickets: {row['open_support_tickets']} (avg severity: {row['avg_ticket_severity']}/5)
+- NPS Score: {row['nps_score']}/10
+- Days to renewal: {row['days_to_renewal']}
+- Champion changed recently: {champion_text}
 
-Company         : {row['company_name']}
-Industry        : {row['industry']}
-Contract Value  : ${row['contract_value']:,}
-Health Score    : {row['health_score']}/100 ({row['tier']})
+Respond in exactly this format and nothing else:
 
-Product Usage
-  Days since last login    : {row['days_since_last_login']} days
-  Weekly logins (last 30d) : {row['weekly_logins_last_30d']}
+RISK REASON: [2 sentences maximum explaining why this account is at risk. Be specific, reference the actual numbers above.]
 
-Feature Adoption
-  Features used            : {row['features_used']} of {row['total_features_available']}
-
-Support Activity
-  Open tickets             : {row['open_support_tickets']}
-  Avg ticket severity      : {row['avg_ticket_severity']} / 5
-
-Customer Sentiment
-  NPS score                : {row['nps_score']} / 10
-  Days since last NPS      : {row['days_since_nps']} days
-
-Account Lifecycle
-  Days since onboarding    : {row['days_since_onboarding']}
-  Days to renewal          : {row['days_to_renewal']}
-  Champion changed         : {champion_text}
-
-Respond in EXACTLY this format — nothing else:
-
-RISK REASON:
-[2 sentences max. Be specific about which signals are most alarming. Mention the contract value if it is above $50,000.]
-
-RECOMMENDED ACTION:
-[1 sentence. Tell the CSM exactly what to do THIS WEEK. Be direct — no fluff.]
-"""
+RECOMMENDED ACTION: [Exactly 1 sentence. Tell the CSM the single most important thing to do THIS WEEK. Be direct and specific.]"""
 
     message = client.messages.create(
         model="claude-sonnet-4-6",
@@ -63,42 +45,39 @@ RECOMMENDED ACTION:
         messages=[{"role": "user", "content": prompt}]
     )
 
-    raw = message.content[0].text.strip()
-    return _parse_insight(raw)
+    response_text = message.content[0].text.strip()
 
+    # Parse the two sections out of Claude's response
+    risk_reason = ""
+    recommended_action = ""
 
-def _parse_insight(raw: str) -> dict:
-    """
-    Splits Claude's response into risk_reason and recommended_action.
-    Falls back gracefully if format is unexpected.
-    """
-    risk_reason         = "Unable to generate risk reason."
-    recommended_action  = "Please review this account manually."
-
-    try:
-        if "RISK REASON:" in raw and "RECOMMENDED ACTION:" in raw:
-            parts              = raw.split("RECOMMENDED ACTION:")
-            risk_reason        = parts[0].replace("RISK REASON:", "").strip()
-            recommended_action = parts[1].strip()
-    except Exception:
-        pass
+    for line in response_text.split("\n"):
+        line = line.strip()
+        if line.startswith("RISK REASON:"):
+            risk_reason = line.replace("RISK REASON:", "").strip()
+        elif line.startswith("RECOMMENDED ACTION:"):
+            recommended_action = line.replace("RECOMMENDED ACTION:", "").strip()
 
     return {
-        "risk_reason"        : risk_reason,
-        "recommended_action" : recommended_action
+        "risk_reason": risk_reason or "Insufficient data to generate insight.",
+        "recommended_action": recommended_action or "Review account manually and schedule a check-in call."
     }
 
 
-def get_bulk_insights(df, top_n=5) -> dict:
+def get_insights_for_top_accounts(df, n=5):
     """
-    Generates insights for the top N at-risk accounts only.
-    Returns a dict keyed by account_id.
-    Used to pre-load the Top 5 digest panel.
+    Runs Claude insights on the top N most at-risk accounts.
+    Returns the same df rows with insight columns added.
+    Only runs on Critical and At-Risk accounts to save API calls.
     """
-    insights = {}
-    top_accounts = df.head(top_n)
+    at_risk = df[df["risk_tier"].isin(["🔴 Critical", "🟡 At-Risk"])].head(n).copy()
 
-    for _, row in top_accounts.iterrows():
-        insights[row["account_id"]] = get_insight(row)
+    insights = []
+    for _, row in at_risk.iterrows():
+        insight = get_insight(row.to_dict())
+        insights.append(insight)
 
-    return insights
+    at_risk["risk_reason"] = [i["risk_reason"] for i in insights]
+    at_risk["recommended_action"] = [i["recommended_action"] for i in insights]
+
+    return at_risk
