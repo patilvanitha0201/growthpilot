@@ -50,10 +50,17 @@ st.markdown("""
 @st.cache_data
 def load_data():
     import os
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    csv_path = os.path.join(base_dir, "data", "accounts.csv)")
-    df = pd.read_csv(csv_path)
-    return score_accounts(df)
+    # Try multiple possible paths
+    possible_paths = [
+        "data/accounts.csv",
+        "/mount/src/growthpilot/data/accounts.csv",
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "accounts.csv")
+    ]
+    for path in possible_paths:
+        if os.path.exists(path):
+            df = pd.read_csv(path)
+            return score_accounts(df)
+    raise FileNotFoundError(f"accounts.csv not found. Tried: {possible_paths}")
 
 
 # ─── Helper: donut chart ───────────────────────────────────────────────────────
