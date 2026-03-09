@@ -49,7 +49,10 @@ st.markdown("""
 # ─── Load & score data ─────────────────────────────────────────────────────────
 @st.cache_data
 def load_data():
-    df = pd.read_csv("data/accounts(Sheet1).csv")
+    import os
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    csv_path = os.path.join(base_dir, "data", "accounts.csv")
+    df = pd.read_csv(csv_path)
     return score_accounts(df)
 
 
