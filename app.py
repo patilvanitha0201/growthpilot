@@ -51,7 +51,7 @@ st.markdown("""
 def load_data():
     import os
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    csv_path = os.path.join(base_dir, "data", "accounts.csv")
+    csv_path = os.path.join(base_dir, "data", "accounts.csv)")
     df = pd.read_csv(csv_path)
     return score_accounts(df)
 

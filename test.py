@@ -3,7 +3,7 @@ import pandas as pd
 from scoring import score_accounts
 from insights import get_insight
 
-df = pd.read_csv("data/accounts(Sheet1).csv")
+df = pd.read_csv("data/accounts.csv")
 scored = score_accounts(df)
 
 # Test on the single most at-risk account only
