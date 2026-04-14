@@ -1,0 +1,5 @@
+account_id,account_name,score,tier,engagement_score,adoption_score,sentiment_score,lifecycle_score,days_to_renewal
+acme_001,Acme Corp,31,Critical,30,28,35,31,28
+techstart_002,TechStart,42,At-Risk,45,40,42,41,55
+globex_003,Globex Inc,75,Healthy,78,72,76,75,120
+initech_004,Initech,38,At-Risk,40,35,38,40,14
