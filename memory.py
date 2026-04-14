@@ -3,12 +3,14 @@ from datetime import datetime
 
 DB_PATH = "growthpilot_memory.db"
 
+# Auto-initialize DB on import
+init_db() if False else None  # forward declaration placeholder
+
 def init_db():
     """Creates the database and tables if they don't exist yet."""
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
 
-    # Stores a health score snapshot for every account, every week
     c.execute("""
         CREATE TABLE IF NOT EXISTS score_history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -25,7 +27,6 @@ def init_db():
         )
     """)
 
-    # Stores every action a CSM takes on an account
     c.execute("""
         CREATE TABLE IF NOT EXISTS interventions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -40,14 +41,9 @@ def init_db():
 
     conn.commit()
     conn.close()
-    print("✅ Database ready")
 
 
 def save_snapshot(accounts: list):
-    """
-    Call this once per week with your current account list.
-    accounts = list of dicts, each with account health data.
-    """
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     today = datetime.now().date().isoformat()
@@ -75,11 +71,10 @@ def save_snapshot(accounts: list):
 
     conn.commit()
     conn.close()
-    print(f"✅ Saved {len(accounts)} snapshots for week {week_num}")
 
 
 def get_trajectory(account_id: str, weeks: int = 8) -> list:
-    """Returns the last N weeks of scores for one account."""
+    init_db()
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("""
@@ -95,7 +90,7 @@ def get_trajectory(account_id: str, weeks: int = 8) -> list:
 
 
 def get_interventions(account_id: str) -> list:
-    """Returns past actions taken on this account."""
+    init_db()
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("""
@@ -111,7 +106,7 @@ def get_interventions(account_id: str) -> list:
 
 
 def log_intervention(account_id, account_name, action_type, summary, score):
-    """Call this when a CSM takes an action on an account."""
+    init_db()
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("""
@@ -126,18 +121,12 @@ def log_intervention(account_id, account_name, action_type, summary, score):
 
 
 def analyze_trajectory(trajectory: list) -> dict:
-    """
-    Takes raw score history and computes meaningful signals.
-    This is what tells Claude 'this account has been declining 3 weeks in a row'
-    instead of just 'this account is at 31'.
-    """
     if not trajectory:
         return {"status": "no_history"}
 
     scores = [t["score"] for t in trajectory]
     current = scores[0]
 
-    # Count how many weeks in a row the score has dropped
     consecutive_declines = 0
     for i in range(len(scores) - 1):
         if scores[i] < scores[i + 1]:
@@ -148,7 +137,6 @@ def analyze_trajectory(trajectory: list) -> dict:
     week_delta  = current - scores[1] if len(scores) > 1 else 0
     month_delta = current - scores[3] if len(scores) > 3 else 0
 
-    # Classify the trend
     if consecutive_declines >= 3:
         trend = "sustained decline"
     elif consecutive_declines >= 1:
@@ -175,30 +163,6 @@ def analyze_trajectory(trajectory: list) -> dict:
         "alert": alert,
     }
 
+
 if __name__ == "__main__":
     init_db()
-
-    # Fake 2 weeks of data for one account
-    week1 = [{"account_id": "acme_001", "account_name": "Acme Corp",
-               "score": 74, "tier": "Healthy",
-               "engagement_score": 80, "adoption_score": 75,
-               "sentiment_score": 70, "lifecycle_score": 72}]
-
-    week2 = [{"account_id": "acme_001", "account_name": "Acme Corp",
-               "score": 31, "tier": "Critical",
-               "engagement_score": 30, "adoption_score": 28,
-               "sentiment_score": 35, "lifecycle_score": 31}]
-
-    save_snapshot(week1)
-    save_snapshot(week2)
-
-    trajectory = get_trajectory("acme_001")
-    signals = analyze_trajectory(trajectory)
-
-    print("\n--- Trajectory ---")
-    for t in trajectory:
-        print(f"  {t['date']}: {t['score']} ({t['tier']})")
-
-    print("\n--- Signals ---")
-    for k, v in signals.items():
-        print(f"  {k}: {v}")
