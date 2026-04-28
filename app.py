@@ -119,6 +119,7 @@ for k, v in [("df", None), ("selected_account", None), ("insight_cache", {})]:
         st.session_state[k] = v
 
 # ── Helpers ───────────────────────────────────────────────
+
 def load_default():
     try:
         df = pd.read_csv("data/accounts.csv")
@@ -314,7 +315,7 @@ if st.session_state.selected_account is not None:
 
         if trail:
             st.markdown(f"""<div class='icard icard-blue'>
-<div class='icard-label'>◎ Agent Reasoning Trail</div>
+<div class='icard-label'>◎ Why the Agent Flagged This</div>
 <div class='icard-text'>{trail}</div>
 </div>""", unsafe_allow_html=True)
 
@@ -337,7 +338,7 @@ else:
     avg = df["health_score"].mean()
 
     st.markdown(f"""<div class='gp-header'>
-<div><span class='gp-logo'>🚀 GrowthPilot</span><span class='gp-pill'>V2 · Agent</span></div>
+<div><span class='gp-logo'>🚀 GrowthPilot</span><span class='gp-pill'>V2 · Agent · Live Demo</span></div>
 <div class='gp-sub'>AI-powered customer health monitoring</div>
 </div>
 <div class='kpi-row'>
@@ -345,6 +346,13 @@ else:
 <div class='kpi'><div class='kpi-label'>Critical</div><div class='kpi-val red'>{nc}</div><div class='kpi-hint'>need action today</div></div>
 <div class='kpi'><div class='kpi-label'>At-Risk</div><div class='kpi-val yellow'>{na}</div><div class='kpi-hint'>monitor closely</div></div>
 <div class='kpi'><div class='kpi-label'>Avg Health Score</div><div class='kpi-val'>{avg:.0f}</div><div class='kpi-hint'>portfolio average</div></div>
+</div>""", unsafe_allow_html=True)
+
+    st.markdown("""<div style='background:#0a1628;border:1px solid #1e3a5f;
+border-radius:10px;padding:0.75rem 1.2rem;margin-bottom:1.2rem;
+font-size:0.82rem;color:#93c5fd;line-height:1.6'>
+🤖 <b>GrowthPilot Agent</b> &nbsp;·&nbsp; Monitors every account, 
+reasons about which 5 need action today, and drafts the first move — autonomously.
 </div>""", unsafe_allow_html=True)
 
     left, right = st.columns([1, 1.7])
